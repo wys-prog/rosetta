@@ -5,9 +5,9 @@ if false then
   if not dll then
     error('dll not loaded: ' .. fli.error())
   end
-  
+
   local printvec2 = fli.loadf(dll, 'printvec2')
-  
+
   if not printvec2 then
     error('fun not loaded: ' .. fli.error())
   end

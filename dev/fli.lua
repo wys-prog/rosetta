@@ -13,6 +13,7 @@
 ---Returns the last error that happened in fli.
 ---@field error fun(): string
 ---@field c fli.c
+---@field asm fli.asm
 
 ---@class fli.c
 ---@field struct fun(name: string, impl: table<string, string>)
@@ -35,6 +36,10 @@
 ---@field int string
 ---@field long string
 ---@field longlong string
+
+---@class fli.asm
+---Maybe (idk if this would be useful)
+---@field castin fun(int: integer, nsize: integer): integer
 
 ---@class fli
 local docs = _G.fli or {}
