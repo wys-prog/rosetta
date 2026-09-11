@@ -1,10 +1,17 @@
 #include <stack>
 #include <iostream>
-#include <dlfcn.h>
-
 #include "abi.h"
 #include "lua/lua.hpp"
 #include "flic.hpp"
+
+#ifdef _WIN32
+#include <windows.h>
+#define IMPL(x) win_##x
+#else
+#include <dlfcn.h>
+#define IMPL(x) unix_##x
+#endif
+#include <format>
 
 local std::stack<const char*> errors;
 
@@ -22,6 +29,7 @@ local const char* last_error() {
   return errors.top();
 }
 
+#ifndef _WIN32
 local void* unix_dlopen(const char* path) {
   void* handle = dlopen(path, RTLD_NOW);
   
@@ -44,9 +52,82 @@ local void* unix_loadf(void* handle, const char* sym) {
   return fun;
 }
 
+local void unix_dlclose(void* handle) {
+  dlclose(handle);
+}
+
+#else
+
+local const char* win_error_message(const char* operation) {
+  DWORD err = GetLastError();
+
+  static thread_local std::string msg;
+
+  char* system_msg = nullptr;
+
+  DWORD len = FormatMessageA(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER |
+    FORMAT_MESSAGE_FROM_SYSTEM |
+    FORMAT_MESSAGE_IGNORE_INSERTS,
+    nullptr,
+    err,
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+    (LPSTR)&system_msg,
+    0,
+    nullptr
+  );
+
+  if (len == 0) {
+    msg = std::format("{} failed (Windows error {})", operation, err);
+  } else {
+    msg = std::format(
+      "{} failed (Windows error {}): {}",
+      operation,
+      err,
+      std::string_view(system_msg, len)
+    );
+
+    LocalFree(system_msg);
+  }
+
+  return msg.c_str();
+}
+
+
+local void* win_dlopen(const char* path) {
+  HMODULE handle = LoadLibraryA(path);
+
+  if (!handle) {
+    std::cout << "alloc" << std::endl;
+    errors.push(win_error_message("LoadLibraryA"));
+    return nullptr;
+  }
+
+  return (void*)handle;
+}
+
+local void* win_loadf(void* handle, const char* sym) {
+  FARPROC fun = GetProcAddress((HMODULE)handle, sym);
+
+  if (!fun) {
+    errors.push(win_error_message("GetProcAddress"));
+    return nullptr;
+  }
+
+  return (void*)fun;
+}
+
+local void win_dlclose(void* handle) {
+  if (handle) {
+    FreeLibrary((HMODULE)handle);
+  }
+}
+
+#endif
+
 local int l_dlopen(lua_State* L) {
   const char* path = luaL_checkstring(L, 1);
-  void* handle = unix_dlopen(path);
+  void* handle = IMPL(dlopen)(path);
 
   if (! handle) {
     lua_pushnil(L);
@@ -60,7 +141,7 @@ local int l_dlopen(lua_State* L) {
 local int l_loadf(lua_State* L) {
   void* handle = (void*)luaL_checkinteger(L, 1);
   const char* sym = luaL_checkstring(L, 2);
-  void* fun = unix_loadf(handle, sym);
+  void* fun = IMPL(loadf)(handle, sym);
   
   if (! fun) {
     lua_pushnil(L);
@@ -72,7 +153,7 @@ local int l_loadf(lua_State* L) {
 }
 
 local int l_dlclose(lua_State* L) {
-  dlclose((void*)luaL_checkinteger(L, 1));
+  IMPL(dlclose)((void*)luaL_checkinteger(L, 1));
   return 0;
 }
 

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 #include <unordered_map>
@@ -149,7 +150,7 @@ namespace ul2 {
       }
       case LUA_TBOOLEAN: {
         ui8 src = lua_toboolean(L, 3);
-        memcpy(dest, &src, std::min(sizeof(src), (unsigned long) len));
+        memcpy(dest, &src, std::min((ui64)sizeof(src), (ui64) len));
         break;
       }
       case LUA_TSTRING: {
@@ -414,8 +415,10 @@ namespace ul2 {
     /*
      * fli.c.MyStruct = metatable
      */
-    lua_setfield(L, -2, owned->stru.name.data());
-    lua_pop(L, 1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, owned->stru.name.data());
+
+    lua_remove(L, -2);
 
     /*
      * NOTE:
@@ -426,7 +429,7 @@ namespace ul2 {
      * A proper __gc-based implementation should eventually delete them. Or idk maybe.
      */
 
-    return 0;
+    return 1;
   }
 
   local luaL_Reg libflic[] = {

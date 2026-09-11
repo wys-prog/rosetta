@@ -1,15 +1,16 @@
-_G.fli = fli or {}
+local fli = require('dev.fli')
 
-local dll = fli.dlopen('abi')
-
-if not dll then
-  error('dll not loaded')
-end
-
-local printvec2 = fli.loadf(dll, 'printvec2')
-
-if not printvec2 then
-  error('fun not loaded')
+if false then
+  local dll = fli.dlopen('abi')
+  if not dll then
+    error('dll not loaded: ' .. fli.error())
+  end
+  
+  local printvec2 = fli.loadf(dll, 'printvec2')
+  
+  if not printvec2 then
+    error('fun not loaded: ' .. fli.error())
+  end
 end
 
 local dump = function (t)
@@ -24,16 +25,19 @@ local dump = function (t)
   end
 end
 
-fli.c.struct('vec2', {
+local thing = fli.c.struct('vec2', {
   x = fli.c.ui16,
   y = fli.c.ui16,
 })
+print(thing)
 
 local vec = fli.c.vec2.new()
 vec.x = 0xFFFF
 vec.y = 0xFFFF
 
 fli.callum(printvec2, 0, fli.c.bytesof(4, vec))
+
+fli.dlclose(dll)
 
 return {
   dump
