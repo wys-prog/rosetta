@@ -76,8 +76,6 @@ local function main()
   end
 end
 
-main()
-
 return {
   main,
   parse_cxx_object,

@@ -1,7 +1,14 @@
 .idea/
+.vscode/
+.zed/
+
+bin/
+
 *.dYSM
 *.dYSM/
-bin/
-.vscode/
 *.dll
 *.exe
+*.o
+*.obj
+*.dylib
+*.DS_Store

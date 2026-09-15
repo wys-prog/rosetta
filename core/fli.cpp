@@ -1,23 +1,24 @@
 #include <stack>
 #include <iostream>
+
 #include "abi.h"
 #include "lua/lua.hpp"
 #include "flic.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
+#include <format>
 #define IMPL(x) win_##x
 #else
 #include <dlfcn.h>
 #define IMPL(x) unix_##x
 #endif
-#include <format>
 
-local std::stack<const char*> errors;
+local std::stack<std::string> errors;
 
-local const char* last_error() {
+local std::string last_error() {
   if (errors.size() > 1) {
-    const char* p = errors.top();
+    std::string p = errors.top();
     errors.pop();
     return p;
   }
@@ -32,7 +33,7 @@ local const char* last_error() {
 #ifndef _WIN32
 local void* unix_dlopen(const char* path) {
   void* handle = dlopen(path, RTLD_NOW);
-  
+
   if (! handle) {
     errors.push(dlerror());
     return nullptr;
@@ -58,7 +59,7 @@ local void unix_dlclose(void* handle) {
 
 #else
 
-local const char* win_error_message(const char* operation) {
+local std::string win_error_message(const char* operation) {
   DWORD err = GetLastError();
 
   static thread_local std::string msg;
@@ -90,7 +91,7 @@ local const char* win_error_message(const char* operation) {
     LocalFree(system_msg);
   }
 
-  return msg.c_str();
+  return msg;
 }
 
 
@@ -134,7 +135,7 @@ local int l_dlopen(lua_State* L) {
   } else {
     lua_pushinteger(L, (i64)handle);
   }
-  
+
   return 1;
 }
 
@@ -142,7 +143,7 @@ local int l_loadf(lua_State* L) {
   void* handle = (void*)luaL_checkinteger(L, 1);
   const char* sym = luaL_checkstring(L, 2);
   void* fun = IMPL(loadf)(handle, sym);
-  
+
   if (! fun) {
     lua_pushnil(L);
   } else {
@@ -178,7 +179,7 @@ local luaL_Reg libfli[] = {
   {"dlopen", l_dlopen},
   {"dlclose", l_dlclose},
   {"error", [](lua_State* L) {
-    lua_pushstring(L, last_error());
+    lua_pushstring(L, last_error().c_str());
     return 1;
   }},
   {"loadf", l_loadf},
@@ -198,7 +199,10 @@ int main(int argc, char* argv[]) {
     std::string_view view = argv[i];
 
     if (! view.starts_with('-') && luaL_dofile(L, view.data()) != LUA_OK) {
-      std::cerr << "lua error in file '" << view << ": " << lua_tostring(L, -1) << std::endl;
+      if (lua_isstring(L, -1)) {
+        auto err = lua_tostring(L, -1);
+        std::cerr << "lua error in file '" << view << ": " << (err ? err : "<unable to get error>") << std::endl;
+      }
     }
   }
 

@@ -3,23 +3,27 @@
 
 ---@class fli
 ---Opens a shared library and returns a C void* pointer casted into an integer.
----@field dlopen fun(path: string): fli.dll? 
+---@field dlopen fun(path: string): fli.dll?
 ---Loads a C symbol from the given shared library.
----@field loadf fun(dll: fli.dll, sym: string): fli.fun? 
+---@field loadf fun(dll: fli.dll, sym: string): fli.fun?
 ---Closes the given shared library.
----@field dlclose fun(dll: fli.dll) 
+---@field dlclose fun(dll: fli.dll)
 ---Calls an unmanaged C function with given bytes.
 ---@field callum fun(fun: fli.fun, retlen: integer, bytes: string): string
 ---Returns the last error that happened in fli.
 ---@field error fun(): string
 ---@field c fli.c
----@field asm fli.asm
 
 ---@class fli.c
----@field struct fun(name: string, impl: table<string, string>)
+---Creates a C-like structure at runtime.
+---@generic T
+---@field struct fun(name: string, impl: T): { new: fun(...): T }
+---Returns bytes of an element.
 ---@field bytesof fun(size: integer, e: any): string
----@field sizeof fun(e): integer?
----@field alignof fun(e): integer?
+---Returns the size of an element in bytes.
+---@field sizeof fun(e: any): integer?
+---Returns the alignas of an element in bytes.
+---@field alignof fun(e: any): integer?
 ---@field i8 string
 ---@field ui8 string
 ---@field i16 string
@@ -37,11 +41,7 @@
 ---@field long string
 ---@field longlong string
 
----@class fli.asm
----Maybe (idk if this would be useful)
----@field castin fun(int: integer, nsize: integer): integer
-
----@class fli
+---@type fli
 local docs = _G.fli or {}
 
 return docs

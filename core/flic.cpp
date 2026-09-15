@@ -231,11 +231,15 @@ namespace ul2 {
    * arg#2: table (structdecl)
    */
   local int l_struct(lua_State *L) {
+    std::cout << __func__ << std::endl;
     size_t len;
+    std::cout << "len" << std::endl;
     strview code(luaL_checklstring(L, 1, &len), len);
 
     // Parse the declaration first.
+    std::cout << "parsing...?????" << std::endl;
     structure parsed = parse_struct_decl(L, code);
+    std::cout << "parsing...OK LOL" << std::endl;
 
     /*
      * IMPORTANT:
@@ -245,19 +249,14 @@ namespace ul2 {
      *
      * So we make our own copies of every string used by the structure.
      */
+    std::cout << "owning lol stfu" << std::endl;
     struct owned_structure {
       structure stru;
       std::vector<str> strings;
 
-      owned_structure(structure src)
-        : stru(std::move(src)) {
-        // One for the structure name + two per field.
+      owned_structure(structure src) : stru(std::move(src)) {
         strings.reserve(1 + stru.fields.size() * 2);
-
-        // Own the structure name.
         strings.emplace_back(stru.name.data());
-
-        // Repoint the structure name at our owned string.
         stru.name = strings.back();
 
         /*
@@ -419,15 +418,6 @@ namespace ul2 {
     lua_setfield(L, -3, owned->stru.name.data());
 
     lua_remove(L, -2);
-
-    /*
-     * NOTE:
-     *
-     * _index, _newindex and _new are intentionally kept alive here.
-     * They are referenced by the Lua closures through lightuserdata.
-     *
-     * A proper __gc-based implementation should eventually delete them. Or idk maybe.
-     */
 
     return 1;
   }
