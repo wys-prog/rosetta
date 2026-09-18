@@ -44,7 +44,7 @@ namespace ul2 {
     return (offset + alignment - 1) / alignment * alignment;
   }
 
-  local std::unordered_map<strview, tpinfo> typereg = {
+  std::unordered_map<strview, tpinfo> typereg = {
     {"i8", {sizeof(i8), alignof(i8)}},
     {"i16", {sizeof(i16), alignof(i16)}},
     {"i32", {sizeof(i32), alignof(i32)}},
@@ -83,7 +83,7 @@ namespace ul2 {
     };
   }
 
-  local structure layout_struct(const strview &name, const std::vector<field_decl> &declarations) {
+  local structure layout_struct(const std::string &name, const std::vector<field_decl> &declarations) {
     structure result{
       .name = str(name),
       .size = 0,
@@ -107,7 +107,7 @@ namespace ul2 {
       };
 
       offset += type.size;
-      result.alignment = std::max(result.alignment, type.alignment);
+      result.alignment = std::max(result.alignment, type.alignment); 
     }
 
     result.size = align_up(offset, result.alignment);
@@ -115,7 +115,7 @@ namespace ul2 {
     return result;
   }
 
-  local structure parse_struct_decl(lua_State *L, const strview &name) {
+  local structure parse_struct_decl(lua_State *L, const std::string &name) {
     std::vector<field_decl> fields{};
     lua_pushnil(L);
 
@@ -231,15 +231,9 @@ namespace ul2 {
    * arg#2: table (structdecl)
    */
   local int l_struct(lua_State *L) {
-    std::cout << __func__ << std::endl;
-    size_t len;
-    std::cout << "len" << std::endl;
-    strview code(luaL_checklstring(L, 1, &len), len);
+    std::string code = luaL_checkstring(L, 1);
 
-    // Parse the declaration first.
-    std::cout << "parsing...?????" << std::endl;
     structure parsed = parse_struct_decl(L, code);
-    std::cout << "parsing...OK LOL" << std::endl;
 
     /*
      * IMPORTANT:
@@ -249,7 +243,6 @@ namespace ul2 {
      *
      * So we make our own copies of every string used by the structure.
      */
-    std::cout << "owning lol stfu" << std::endl;
     struct owned_structure {
       structure stru;
       std::vector<str> strings;
