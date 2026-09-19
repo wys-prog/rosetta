@@ -99,7 +99,6 @@ local void* win_dlopen(const char* path) {
   HMODULE handle = LoadLibraryA(path);
 
   if (!handle) {
-    std::cout << "alloc" << std::endl;
     errors.push(win_error_message("LoadLibraryA"));
     return nullptr;
   }
@@ -165,8 +164,6 @@ local int l_callum(lua_State* L) {
   size_t bytessize;
   const char* bytes = luaL_checklstring(L, 3, &bytessize);
   auto asfunc = (ui8(*)(char))fun;
-  std::cout << __func__ << ": " << "calling a func with '" << std::string(bytes, bytessize) << "'" << std::endl;
-  std::cout << __func__ << ": " << std::format("beg:{}, len:{}", (void*)bytes, bytessize) << std::endl;
   ui8 out = asfunc(*bytes);
   ui8* p = &out;
 
