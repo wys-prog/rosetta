@@ -170,13 +170,10 @@ namespace ul2 {
   }
 
   local int l_sizeof(lua_State *L) {
-    const char *tpname = "";
+    std::string tpname;
 
     if (lua_isstring(L, 1)) {
       tpname = lua_tostring(L, 1);
-    } else if (lua_istable(L, 1) || lua_isuserdata(L, 1)) {
-      lua_getfield(L, 1, "__typename");
-      tpname = lua_tostring(L, -1);
     } else if (lua_istable(L, 1) || lua_isuserdata(L, 1)) {
       lua_getfield(L, 1, "__typename");
 
@@ -186,17 +183,21 @@ namespace ul2 {
         return 1;
       }
 
-      const char *s = lua_tostring(L, -1);
-      tpname = s;
-
+      tpname = lua_tostring(L, -1);
       lua_pop(L, 1);
     } else {
       lua_pushnil(L);
       return 1;
     }
 
-    if (!typereg.contains(tpname)) lua_pushnil(L);
-    else lua_pushinteger(L, typereg[tpname].size);
+    auto it = typereg.find(tpname);
+
+    if (it == typereg.end()) {
+      lua_pushnil(L);
+    } else {
+      lua_pushinteger(L, it->second.size);
+    }
+
     return 1;
   }
 

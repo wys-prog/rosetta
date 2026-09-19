@@ -24,7 +24,7 @@ print('created vec2 type!!')
 
 local vec = vec2.new()
 
-print('sizeof(vec):', fli.c.sizeof(vec))
+print('sizeof(vec):', fli.c.sizeof(vec2))
 fli.callum(fun, 0, fli.c.bytesof(fli.c.sizeof(vec) or 4, vec))
 
 fli.callum(fun, 0, 'MELO')
