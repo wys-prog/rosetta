@@ -1,3 +1,8 @@
+_G.fli = _G.fli or (function()
+  warn('_G.fli is nil! (did you launched this file with Rosetta?)')
+  return {}
+end)()
+
 ---@class fli.dll
 ---@class fli.fun
 
@@ -40,8 +45,42 @@
 ---@field int string
 ---@field long string
 ---@field longlong string
+---@field void string
 
----@type fli
-local docs = _G.fli or {}
+---@class fli
+local fli = _G.fli or {}
 
-return docs
+---@class fli.cplus
+local plus = {}
+
+---Loads an unmanaged C-raw function and returns a Lua usable function. The returned function should be called from Lua.
+---@generic Args..., Ret
+---@param dll fli.dll
+---@param name string
+---@param ret Ret
+---@param ... Args...
+---@return (fun(...: Args...):Ret)|nil, string?
+plus.load = function (dll, name, ret, ...)
+  local fun = fli.loadf(dll, name)
+
+  if not fun then
+    return nil, ("cannot load symbol '%s' from dll '%d': %s"):format(
+      name, dll, fli.error()
+    )
+  end
+
+  return function (...)
+    local bytes = ''
+    for _, value in ipairs({...}) do
+      bytes = bytes .. fli.c.bytesof(value.__typesize, value)
+      print('bytes:', bytes)
+    end
+
+    fli.callum(fun, fli.c.sizeof(ret) or 4, bytes)
+  end
+end
+
+
+fli.cplus = plus
+
+return fli

@@ -1,6 +1,7 @@
 #include "abi.h"
 #include "views.hpp"
 #include "lua/lua.hpp"
+#include "debug/bin.hpp"
 
 #include <memory>
 #include <string>
@@ -63,6 +64,7 @@ namespace ul2 {
     {"short", {sizeof(short), alignof(short)}},
     {"double", {sizeof(double), alignof(double)}},
     {"float", {sizeof(float), alignof(float)}},
+    {"void", {0, 0}},
     {"longdouble", {sizeof(long double), alignof(long double)}},
   };
 
@@ -169,22 +171,31 @@ namespace ul2 {
     }
   }
 
+  local void safecopybytes(ui8* dst, size_t size, std::string retreived) {
+    std::memcpy(dst, retreived.data(), std::min(size, retreived.size()));
+
+    if (retreived.size() < size) {
+      std::memcpy(dst + retreived.size(), 0, size -  retreived.size());
+    }
+  }
+
   local int l_sizeof(lua_State *L) {
     std::string tpname;
 
     if (lua_isstring(L, 1)) {
       tpname = lua_tostring(L, 1);
     } else if (lua_istable(L, 1) || lua_isuserdata(L, 1)) {
-      lua_getfield(L, 1, "__typename");
+      lua_getfield(L, 1, "__typesize");
 
-      if (!lua_isstring(L, -1)) {
+      if (!lua_isinteger(L, -1)) {
         lua_pop(L, 1);
         lua_pushnil(L);
         return 1;
       }
 
-      tpname = lua_tostring(L, -1);
+      lua_pushinteger(L, lua_tointeger(L, -1));
       lua_pop(L, 1);
+      return 1;
     } else {
       lua_pushnil(L);
       return 1;
@@ -202,12 +213,34 @@ namespace ul2 {
   }
 
   local int l_alignof(lua_State *L) {
-    const char *tpname = luaL_checkstring(L, 1);
+    std::string tpname;
 
-    if (!typereg.contains(tpname)) {
-      lua_pushinteger(L, -1);
+    if (lua_isstring(L, 1)) {
+      tpname = lua_tostring(L, 1);
+    } else if (lua_istable(L, 1) || lua_isuserdata(L, 1)) {
+      lua_getfield(L, 1, "__typealign");
+
+      if (!lua_isinteger(L, -1)) {
+        lua_pop(L, 1);
+        lua_pushnil(L);
+        return 1;
+      }
+
+      lua_pushinteger(L, lua_tointeger(L, -1));
+      lua_pop(L, 1);
+      return 1;
+
     } else {
-      lua_pushinteger(L, typereg[tpname].alignment);
+      lua_pushnil(L);
+      return 1;
+    }
+
+    auto it = typereg.find(tpname);
+
+    if (it == typereg.end()) {
+      lua_pushnil(L);
+    } else {
+      lua_pushinteger(L, it->second.alignment);
     }
 
     return 1;
@@ -216,10 +249,24 @@ namespace ul2 {
   local int l_bytesof(lua_State *L) {
     auto size = luaL_checkinteger(L, 1);
     if (lua_isuserdata(L, 2)) {
-      auto data = (char*)lua_touserdata(L, 2);
-      lua_pushlstring(L, data, size);
+      void* raw = lua_touserdata(L, 2);
+      auto firstp = static_cast<uint8_t*>(raw);
+      auto first = *firstp;
+      std::cout << std::hex << "0x" << (uintptr_t)raw << " : 0x" << (uintptr_t)firstp << std::endl;
+      debug::writeln(debug::fmtbytes(firstp, size));
+      lua_pushlstring(L, (char*)firstp, size);
     } else if (lua_isinteger(L, 2)) {
-
+      lua_Integer value = lua_tointeger(L, 2);
+      std::string bytes((size_t)size, '\0');
+      std::memcpy(bytes.data(), &value, (size_t)size);
+      lua_pushlstring(L, bytes.data(), bytes.size());
+    } else if (lua_isnumber(L, 2)) {
+      lua_Number value = lua_tonumber(L, 2);
+      std::string bytes((size_t)size, '\0');
+      std::memcpy(bytes.data(), &value, (size_t)size);
+      lua_pushlstring(L, bytes.data(), bytes.size());
+    } else {
+      return luaL_error(L, "%s: unsupported type '%s'!", __func__, luaL_typename(L, 2));
     }
 
     return 1;
@@ -345,6 +392,9 @@ namespace ul2 {
       const structure &stru = owned->stru;
 
       ui8 *strubuf = static_cast<ui8 *>(lua_newuserdata(L, stru.size));
+      std::cout << "debug: user datum starts at 0x" << std::hex << (uintptr_t)strubuf << std::endl;
+      debug::writeln(debug::fmtbytes(strubuf, stru.size));
+
 
       /*
        * Initialize the whole struct.
@@ -352,7 +402,11 @@ namespace ul2 {
        * This also prevents uninitialized padding/fields from containing
        * random garbage when Lua accesses them.
        */
-      std::memset(strubuf, 0, stru.size);
+      if (lua_isstring(L, 1)) {
+        safecopybytes(strubuf, stru.size, lua_tostring(L, 1));
+      } else {
+        std::memset(strubuf, 0, stru.size);
+      }
 
       luaL_getmetatable(L, stru.name.data());
       lua_setmetatable(L, -2);

@@ -12,3 +12,8 @@ bin/
 *.obj
 *.dylib
 *.DS_Store
+
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build/

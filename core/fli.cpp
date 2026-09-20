@@ -163,6 +163,7 @@ local int l_callum(lua_State* L) {
 
   size_t bytessize;
   const char* bytes = luaL_checklstring(L, 3, &bytessize);
+  std::cout << __func__ << ": bytes of call " << bytes << std::endl;
   auto asfunc = (ui8(*)(char))fun;
   ui8 out = asfunc(*bytes);
   ui8* p = &out;

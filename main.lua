@@ -1,30 +1,27 @@
 local fli = require('dev.fli')
 
-local dll = fli.dlopen('vec2')
+local dll = fli.dlopen('abi')
 
 if not dll then
   error('dll is not open! ' .. fli.error())
-else
-  print('loaded the dll !! yessss')
 end
 
 local fun = fli.loadf(dll, 'printvec2')
 
 if not fun then
   error('fun is not open! ' .. fli.error())
-else
-  print('loaded the function now yesss')
 end
 
-print('creating vec2 type!!')
 local vec2 = fli.c.struct('vec2', {
-  x = fli.c.i32
+  x = fli.c.i32,
+  y = fli.c.i32,
 })
-print('created vec2 type!!')
 
-local vec = vec2.new()
+local vec = vec2.new('MELOMELO')
 
-print('sizeof(vec):', fli.c.sizeof(vec2))
-fli.callum(fun, 0, fli.c.bytesof(fli.c.sizeof(vec) or 4, vec))
+--local printvec2 = assert(fli.cplus.load(dll, 'printvec2', fli.c.void, vec2))
+--printvec2(vec)
 
-fli.callum(fun, 0, 'MELO')
+local bytes = fli.c.bytesof(vec.__typesize, vec)
+print(('bytes "%s"'):format(bytes))
+fli.callum(fun, 0, bytes)
