@@ -162,10 +162,12 @@ local int l_callum(lua_State* L) {
   i64 outlen = luaL_checkinteger(L, 2);
 
   size_t bytessize;
-  const char* bytes = luaL_checklstring(L, 3, &bytessize);
-  std::cout << __func__ << ": bytes of call " << bytes << std::endl;
-  auto asfunc = (ui8(*)(char))fun;
-  ui8 out = asfunc(*bytes);
+  const char* pbytes = luaL_checklstring(L, 3, &bytessize);
+  std::string bytes(pbytes, bytessize); // FIXME: ui8string?
+  std::cout << __func__ << ": bytes of call '" << bytes << "'" << std::endl;
+  std::cout << __func__ << ": address 0x" << std::hex << (void*)pbytes << std::endl;
+  auto asfunc = (ui8(*)(ui8*))fun;
+  ui8 out = asfunc((ui8*)pbytes);
   ui8* p = &out;
 
   lua_pushlstring(L, (const char*)p, outlen);
